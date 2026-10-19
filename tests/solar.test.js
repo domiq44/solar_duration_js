@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { formatClockTime, formatDuration, localDateString } from "../src/formatting.js";
+import { dateStringInTimezone, formatClockTime, formatDuration, localDateString } from "../src/formatting.js";
 import {
   declinationFor,
   durationHours,
@@ -287,6 +287,24 @@ test("localDateString formate la date selon le calendrier local", () => {
 
   // Then
   assert.equal(dateString, expectedDateString);
+});
+
+// Vérifie que la date du jour dépend du fuseau du lieu choisi.
+test("dateStringInTimezone renvoie la date du fuseau demandé", () => {
+  // Given
+  const instant = new Date("2024-01-01T00:30:00Z");
+  const losAngelesTimezone = "America/Los_Angeles";
+  const tokyoTimezone = "Asia/Tokyo";
+  const expectedLosAngelesDate = "2023-12-31";
+  const expectedTokyoDate = "2024-01-01";
+
+  // When
+  const losAngelesDate = dateStringInTimezone(instant, losAngelesTimezone);
+  const tokyoDate = dateStringInTimezone(instant, tokyoTimezone);
+
+  // Then
+  assert.equal(losAngelesDate, expectedLosAngelesDate);
+  assert.equal(tokyoDate, expectedTokyoDate);
 });
 
 // Vérifie le formatage des heures fractionnaires en heures et minutes.

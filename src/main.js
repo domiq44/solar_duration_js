@@ -2,7 +2,7 @@ import { findCity } from "./cities.js";
 import { createCityPicker } from "./city-picker.js";
 import { drawSolarChart } from "./chart.js";
 import { calculateSolarDay } from "./calculation.js";
-import { formatClockTime, formatDuration, localDateString } from "./formatting.js";
+import { dateStringInTimezone, formatClockTime, formatDuration } from "./formatting.js";
 import {
   parseDate
 } from "./solar.js";
@@ -112,12 +112,12 @@ function resetSettings(cityPicker) {
   const cleared = clearSettings();
   chosenCityName = "";
   cityPicker.clear();
-  elements["date-input"].value = localDateString(new Date());
   elements["latitude-input"].value = "47.2967";
   elements["latitude-range"].value = "47.3";
   elements["longitude-input"].value = "0";
   elements["model-select"].value = "meeus";
   elements["timezone-select"].value = "Europe/Paris";
+  elements["date-input"].value = dateStringInTimezone(new Date(), elements["timezone-select"].value);
   elements["threshold-input"].value = "-0.833";
   update();
   if (!cleared) setStatus("Le navigateur ne permet pas de supprimer les réglages mémorisés.", true);
@@ -181,12 +181,12 @@ const cityPicker = createCityPicker(elements["city-input"], elements["city-sugge
   onSelect: selectCity
 });
 
-elements["date-input"].value = localDateString(new Date());
+elements["date-input"].value = dateStringInTimezone(new Date(), elements["timezone-select"].value);
 restoreSettings(cityPicker);
 update();
 
 elements["today-button"].addEventListener("click", () => {
-  elements["date-input"].value = localDateString(new Date());
+  elements["date-input"].value = dateStringInTimezone(new Date(), elements["timezone-select"].value);
   update();
 });
 elements["date-input"].addEventListener("input", update);

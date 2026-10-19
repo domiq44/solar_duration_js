@@ -18,7 +18,7 @@ Le script ouvre l'application dans votre navigateur. Python 3 est nécessaire po
 
 ## Utiliser l'application
 
-1. Choisissez une date. Le bouton « Aujourd'hui » sélectionne la date du jour.
+1. Choisissez une date. Le bouton « Aujourd'hui » sélectionne le jour courant dans le fuseau horaire du lieu choisi, et non celui de l'appareil.
 2. Choisissez une ville ou indiquez ses coordonnées. Le bouton « Position » peut remplir les coordonnées à partir de votre emplacement, avec l'autorisation de votre navigateur.
 3. Vérifiez le fuseau horaire, puis choisissez un modèle de calcul si nécessaire. Le modèle recommandé est sélectionné par défaut.
 4. Consultez la durée estimée, les heures locales de lever et de coucher, et le graphique. Vous pouvez modifier le seuil solaire pour adapter le calcul.
