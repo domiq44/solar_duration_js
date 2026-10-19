@@ -13,6 +13,8 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
   canvas.width = Math.round(bounds.width * scale);
   canvas.height = Math.round(bounds.height * scale);
   const context = canvas.getContext("2d");
+  const styles = typeof getComputedStyle === "function" ? getComputedStyle(canvas) : null;
+  const chartColor = (property, fallback) => styles?.getPropertyValue(property).trim() || fallback;
   context.scale(scale, scale);
   const width = bounds.width;
   const height = bounds.height;
@@ -23,8 +25,8 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
   context.clearRect(0, 0, width, height);
   context.font = "10px Segoe UI, sans-serif";
   context.textBaseline = "middle";
-  context.fillStyle = "#647169";
-  context.strokeStyle = "#e5ebe6";
+  context.fillStyle = chartColor("--chart-axis", "#56645b");
+  context.strokeStyle = chartColor("--chart-grid", "#dce4dd");
   context.lineWidth = 1;
   for (const altitude of [-60, 0, 60]) {
     const position = y(altitude);
@@ -37,7 +39,7 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
   }
 
   context.setLineDash([4, 4]);
-  context.strokeStyle = "#c75b42";
+  context.strokeStyle = chartColor("--chart-threshold", "#a13e2a");
   context.save();
   context.beginPath();
   context.rect(plot.left, plot.top, plot.right - plot.left, y(threshold) - plot.top);
@@ -59,7 +61,7 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
   context.lineTo(plot.right, y(-90));
   context.lineTo(plot.left, y(-90));
   context.closePath();
-  context.fillStyle = "rgba(231, 168, 55, 0.15)";
+  context.fillStyle = chartColor("--chart-sun-fill", "rgba(138, 85, 0, 0.12)");
   context.fill();
   context.restore();
   context.setLineDash([]);
@@ -72,7 +74,7 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
     if (step === 0) context.moveTo(pointX, pointY);
     else context.lineTo(pointX, pointY);
   }
-  context.strokeStyle = "#d99422";
+  context.strokeStyle = chartColor("--chart-sun", "#8a5500");
   context.lineWidth = 2.5;
   context.lineJoin = "round";
   context.stroke();
@@ -83,11 +85,11 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
   context.moveTo(maximumX, y(solarAltitude(maximumHour, latitude, declination)));
   context.lineTo(maximumX, zeroAltitudeY);
   context.setLineDash([]);
-  context.strokeStyle = "rgba(100, 113, 105, 0.65)";
+  context.strokeStyle = chartColor("--chart-current-axis", "rgba(86, 100, 91, 0.7)");
   context.lineWidth = 1;
   context.stroke();
   context.font = "10px Segoe UI, sans-serif";
-  context.fillStyle = "#647169";
+  context.fillStyle = chartColor("--chart-axis", "#56645b");
   context.textAlign = "center";
   context.fillText("S", maximumX, zeroAltitudeY + 12);
   if (currentSolarHour !== null) {
@@ -96,16 +98,16 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
     context.beginPath();
     context.moveTo(x(currentSolarHour), markerY);
     context.lineTo(x(currentSolarHour), y(0));
-    context.strokeStyle = "rgba(217, 148, 34, 0.65)";
+    context.strokeStyle = chartColor("--chart-current-sun", "rgba(138, 85, 0, 0.65)");
     context.lineWidth = 1;
     context.stroke();
     context.font = "34px Segoe UI Symbol, sans-serif";
-    context.fillStyle = "#d99422";
+    context.fillStyle = chartColor("--chart-sun", "#8a5500");
     context.textAlign = "center";
     context.fillText("☀", x(currentSolarHour), markerY);
   }
   context.font = "10px Segoe UI, sans-serif";
-  context.fillStyle = "#647169";
+  context.fillStyle = chartColor("--chart-axis", "#56645b");
   context.textAlign = "center";
   for (const hour of [0, 6, 12, 18, 24]) context.fillText(`${String(hour).padStart(2, "0")} h`, x(hour), height - 10);
   const currentTimeLabel = currentSolarHour === null ? "" : " Le soleil indique l'heure actuelle.";

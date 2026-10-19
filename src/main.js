@@ -10,6 +10,7 @@ import {
 import { clearSettings, loadSettings, saveSettings } from "./settings.js";
 
 const elements = Object.fromEntries([
+  "theme-select",
   "date-input", "today-button", "city-input", "city-suggestions", "latitude-input",
   "latitude-range", "longitude-input", "location-button", "model-select", "timezone-select",
   "threshold-input", "threshold-reset", "status-message", "result-date", "duration-value",
@@ -27,6 +28,16 @@ const validationMessages = {
 
 let chosenCityName = "";
 let currentSolarChartData = null;
+let themePreference = "system";
+const colorSchemeQuery = window.matchMedia?.("(prefers-color-scheme: dark)") ?? null;
+
+function applyTheme(preference) {
+  if (preference === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.dataset.theme = preference;
+  elements["theme-select"].value = preference;
+  document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement)
+    .getPropertyValue("--paper").trim();
+}
 
 function setStatus(message, error = false) {
   elements["status-message"].textContent = message;
@@ -60,7 +71,8 @@ function persistSettings() {
     longitude: elements["longitude-input"].value,
     model: elements["model-select"].value,
     timezone: elements["timezone-select"].value,
-    threshold: elements["threshold-input"].value
+    threshold: elements["threshold-input"].value,
+    theme: themePreference
   };
   if (!saveSettings(settings)) {
     setStatus("Le navigateur ne permet pas de mémoriser les réglages.", true);
@@ -95,8 +107,7 @@ function redrawSolarChart() {
   );
 }
 
-function restoreSettings(cityPicker) {
-  const settings = loadSettings();
+function restoreSettings(cityPicker, settings) {
   if (!settings) return;
 
   const savedDate = parseDate(settings.date);
@@ -130,6 +141,8 @@ function restoreSettings(cityPicker) {
 
 function resetSettings(cityPicker) {
   const cleared = clearSettings();
+  themePreference = "system";
+  applyTheme(themePreference);
   chosenCityName = "";
   cityPicker.clear();
   elements["latitude-input"].value = "47.2967";
@@ -208,10 +221,25 @@ const cityPicker = createCityPicker(elements["city-input"], elements["city-sugge
   onSelect: selectCity
 });
 
+const savedSettings = loadSettings();
+if (["system", "light", "dark"].includes(savedSettings?.theme)) themePreference = savedSettings.theme;
+applyTheme(themePreference);
 elements["date-input"].value = dateStringInTimezone(new Date(), elements["timezone-select"].value);
-restoreSettings(cityPicker);
+restoreSettings(cityPicker, savedSettings);
 update();
 
+elements["theme-select"].addEventListener("change", () => {
+  themePreference = elements["theme-select"].value;
+  applyTheme(themePreference);
+  persistSettings();
+  redrawSolarChart();
+});
+colorSchemeQuery?.addEventListener("change", () => {
+  if (themePreference === "system") {
+    applyTheme("system");
+    redrawSolarChart();
+  }
+});
 elements["today-button"].addEventListener("click", () => {
   elements["date-input"].value = dateStringInTimezone(new Date(), elements["timezone-select"].value);
   update();

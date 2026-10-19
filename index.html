@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f3f6f1">
+    <meta name="theme-color" content="#111815">
     <title>Durée du jour | Solar Duration</title>
     <link rel="stylesheet" href="src/styles.css">
     <script type="module" src="src/main.js"></script>
@@ -12,7 +12,17 @@
     <main class="page">
       <header class="topline">
         <div class="wordmark"><span class="mark" aria-hidden="true">◒</span> Solar Duration</div>
-        <span class="range-note">Dates disponibles : 1900 à 3000</span>
+        <div class="topline-actions">
+          <span class="range-note">Dates disponibles : 1900 à 3000</span>
+          <label class="theme-control" for="theme-select">
+            <span>Thème</span>
+            <select id="theme-select" aria-label="Choisir le thème">
+              <option value="system">Appareil</option>
+              <option value="light">Clair</option>
+              <option value="dark">Sombre</option>
+            </select>
+          </label>
+        </div>
       </header>
       <section class="heading" aria-labelledby="page-title">
         <p class="eyebrow">Calcul astronomique</p>
