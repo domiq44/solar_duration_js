@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { dateStringInTimezone, formatClockTime, formatDuration, localDateString } from "../src/formatting.js";
 import {
+  civilSolarNoonHour,
   declinationFor,
   durationHours,
   estimateSolarEvents,
@@ -38,6 +39,27 @@ test("parseDate accepte un jour bissextile valide", () => {
 
   // Then
   assert.equal(result.ordinal, expectedOrdinal);
+});
+
+// Vérifie que le midi solaire civil est le milieu du lever et du coucher.
+test("civilSolarNoonHour est le milieu du lever et du coucher", () => {
+  // Given
+  const date = parseDate(REFERENCE_DATE);
+  const latitude = 48.85;
+  const longitude = 2.35;
+  const threshold = -0.833;
+  const timezone = "Europe/Paris";
+  const declination = declinationFor(date, MEEUS_MODEL);
+  const toleranceHours = 1e-9;
+  const expectedDifferenceIsWithinTolerance = true;
+
+  // When
+  const noon = civilSolarNoonHour(date, longitude, timezone);
+  const events = estimateSolarEvents(date, latitude, longitude, declination, threshold, timezone);
+  const differenceIsWithinTolerance = Math.abs(noon - (events.sunrise + events.sunset) / 2) < toleranceHours;
+
+  // Then
+  assert.equal(differenceIsWithinTolerance, expectedDifferenceIsWithinTolerance);
 });
 
 // Vérifie que quinze degrés de longitude vers l'est ajoutent une heure solaire.

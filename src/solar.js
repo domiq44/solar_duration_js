@@ -134,6 +134,10 @@ export function solarHourAt(instant, longitude, date) {
   return ((hour % 24) + 24) % 24;
 }
 
+export function civilSolarNoonHour(date, longitude, timezone) {
+  return (720 - equationOfTimeMinutes(date) - 4 * longitude + timezoneOffsetMinutes(date, timezone)) / 60;
+}
+
 export function estimateSolarEvents(date, latitude, longitude, declination, threshold, timezone) {
   const phi = latitude * radians;
   const delta = declination * radians;

@@ -4,6 +4,7 @@ import { drawSolarChart } from "./chart.js";
 import { calculateSolarDay } from "./calculation.js";
 import { dateStringInTimezone, formatClockTime, formatDuration } from "./formatting.js";
 import {
+  civilSolarNoonHour,
   parseDate,
   solarHourAt
 } from "./solar.js";
@@ -92,18 +93,24 @@ function clearResults() {
   elements["solar-chart"].setAttribute("aria-label", "Graphique indisponible tant que les paramètres ne sont pas valides.");
 }
 
-function redrawSolarChart() {
-  if (!currentSolarChartData) return;
+function currentSolarHourForDisplayedDate() {
   const now = new Date();
-  const currentSolarHour = elements["date-input"].value === dateStringInTimezone(now, elements["timezone-select"].value)
+  const isDisplayedDateToday = elements["date-input"].value === dateStringInTimezone(now, elements["timezone-select"].value);
+  return isDisplayedDateToday
     ? solarHourAt(now, currentSolarChartData.longitude, currentSolarChartData.date)
     : null;
+}
+
+function redrawSolarChart() {
+  if (!currentSolarChartData) return;
+  const currentSolarHour = currentSolarHourForDisplayedDate();
   drawSolarChart(
     elements["solar-chart"],
     currentSolarChartData.latitude,
     currentSolarChartData.declination,
     currentSolarChartData.threshold,
-    currentSolarHour
+    currentSolarHour,
+    civilSolarNoonHour(currentSolarChartData.date, currentSolarChartData.longitude, elements["timezone-select"].value)
   );
 }
 

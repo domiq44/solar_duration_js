@@ -248,6 +248,23 @@ test("le maximum solaire est repéré à midi sur la ligne zéro", (t) => {
   assert.equal(Boolean(label), expectedLabelWasDrawn);
 });
 
+// Vérifie que le midi solaire se place à son heure légale quand l'axe est décalé.
+test("le maximum solaire suit l'heure légale du midi solaire", (t) => {
+  // Given
+  const solarNoonHour = 13.5;
+  const expectedMaximumX = 38 + solarNoonHour / 24 * (DEFAULT_CANVAS_WIDTH - 9 - 38);
+  const expectedLabel = "S";
+  installWindow(t, DEFAULT_DEVICE_PIXEL_RATIO);
+  const canvas = createCanvas(DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT);
+
+  // When
+  drawSolarChart(canvas, DEFAULT_CHART_LATITUDE, DEFAULT_CHART_DECLINATION, DEFAULT_CHART_THRESHOLD, null, solarNoonHour);
+
+  // Then
+  const label = canvas.calls.find(([name, text]) => name === "fillText" && text === expectedLabel);
+  assert.equal(label[2], expectedMaximumX);
+});
+
 // Vérifie que le libellé accessible décrit les heures solaires de l'axe.
 test("le libellé accessible du graphique précise l'heure solaire", (t) => {
   // Given
