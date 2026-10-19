@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { drawSolarChart } from "../src/chart.js";
+import { solarAltitude } from "../src/solar.js";
 
 const DEFAULT_CHART_LATITUDE = 48;
 const DEFAULT_CHART_DECLINATION = -9.72;
@@ -31,6 +32,8 @@ function createCanvas(width, height) {
     "beginPath", "clearRect", "clip", "closePath", "fill", "fillText", "lineTo",
     "moveTo", "rect", "restore", "save", "scale", "setLineDash", "stroke"
   ].map((name) => [name, (...args) => calls.push([name, ...args])]));
+  context.font = "";
+  context.fillText = (...args) => calls.push(["fillText", ...args, context.font]);
   return {
     calls,
     attributes,
@@ -114,6 +117,88 @@ test("le graphique indique les heures solaires sur son axe", (t) => {
   // Then
   const axisLabelWasDrawn = canvas.calls.some(([name, text]) => name === "fillText" && text === expectedAxisLabel);
   assert.equal(axisLabelWasDrawn, expectedAxisLabelWasDrawn);
+  const axisLabel = canvas.calls.find(([name, text]) => name === "fillText" && text === expectedAxisLabel);
+  assert.equal(axisLabel[4], "10px Segoe UI, sans-serif");
+});
+
+// Vérifie que le symbole solaire se place sur la courbe à l'heure actuelle.
+test("le symbole solaire se place à l'heure actuelle sur la courbe", (t) => {
+  // Given
+  const currentSolarHour = 9;
+  const plotTop = 12;
+  const plotBottom = DEFAULT_CANVAS_HEIGHT - 26;
+  const expectedSunSymbol = "☀";
+  const expectedSunFont = "34px Segoe UI Symbol, sans-serif";
+  const expectedSunX = 38 + currentSolarHour / 24 * (DEFAULT_CANVAS_WIDTH - 9 - 38);
+  const altitude = solarAltitude(currentSolarHour, DEFAULT_CHART_LATITUDE, DEFAULT_CHART_DECLINATION);
+  const expectedSunY = plotTop + (90 - altitude) / 180 * (plotBottom - plotTop);
+  const expectedSunPosition = [expectedSunX, expectedSunY, expectedSunFont];
+  installWindow(t, DEFAULT_DEVICE_PIXEL_RATIO);
+  const canvas = createCanvas(DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT);
+
+  // When
+  drawSolarChart(canvas, DEFAULT_CHART_LATITUDE, DEFAULT_CHART_DECLINATION, DEFAULT_CHART_THRESHOLD, currentSolarHour);
+
+  // Then
+  const sunMarker = canvas.calls.find(([name, text]) => name === "fillText" && text === expectedSunSymbol);
+  assert.deepEqual(sunMarker.slice(2), expectedSunPosition);
+});
+
+// Vérifie que la verticale de l'heure actuelle rejoint la ligne d'altitude zéro.
+test("la verticale de l'heure actuelle rejoint la ligne zéro", (t) => {
+  // Given
+  const currentSolarHour = 9;
+  const plotTop = 12;
+  const plotBottom = DEFAULT_CANVAS_HEIGHT - 26;
+  const expectedX = 38 + currentSolarHour / 24 * (DEFAULT_CANVAS_WIDTH - 9 - 38);
+  const altitude = solarAltitude(currentSolarHour, DEFAULT_CHART_LATITUDE, DEFAULT_CHART_DECLINATION);
+  const expectedStartY = plotTop + (90 - altitude) / 180 * (plotBottom - plotTop);
+  const expectedEndY = plotTop + (90 - 0) / 180 * (plotBottom - plotTop);
+  const expectedStartWasDrawn = true;
+  const expectedEndWasDrawn = true;
+  installWindow(t, DEFAULT_DEVICE_PIXEL_RATIO);
+  const canvas = createCanvas(DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT);
+
+  // When
+  drawSolarChart(canvas, DEFAULT_CHART_LATITUDE, DEFAULT_CHART_DECLINATION, DEFAULT_CHART_THRESHOLD, currentSolarHour);
+
+  // Then
+  const startWasDrawn = canvas.calls.some(([name, x, y]) => name === "moveTo" && x === expectedX && y === expectedStartY);
+  const endWasDrawn = canvas.calls.some(([name, x, y]) => name === "lineTo" && x === expectedX && y === expectedEndY);
+  assert.equal(startWasDrawn, expectedStartWasDrawn);
+  assert.equal(endWasDrawn, expectedEndWasDrawn);
+});
+
+// Vérifie que la verticale du maximum et son repère S sont à midi solaire.
+test("le maximum solaire est repéré à midi sur la ligne zéro", (t) => {
+  // Given
+  const maximumSolarHour = 12;
+  const plotTop = 12;
+  const plotBottom = DEFAULT_CANVAS_HEIGHT - 26;
+  const expectedMaximumX = 38 + maximumSolarHour / 24 * (DEFAULT_CANVAS_WIDTH - 9 - 38);
+  const maximumAltitude = solarAltitude(maximumSolarHour, DEFAULT_CHART_LATITUDE, DEFAULT_CHART_DECLINATION);
+  const expectedMaximumY = plotTop + (90 - maximumAltitude) / 180 * (plotBottom - plotTop);
+  const expectedZeroAltitudeY = plotTop + (90 - 0) / 180 * (plotBottom - plotTop);
+  const expectedLabel = "S";
+  const expectedLabelY = expectedZeroAltitudeY + 12;
+  const expectedMaximumStartWasDrawn = true;
+  const expectedMaximumEndWasDrawn = true;
+  const expectedLabelWasDrawn = true;
+  installWindow(t, DEFAULT_DEVICE_PIXEL_RATIO);
+  const canvas = createCanvas(DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT);
+
+  // When
+  drawSolarChart(canvas, DEFAULT_CHART_LATITUDE, DEFAULT_CHART_DECLINATION, DEFAULT_CHART_THRESHOLD);
+
+  // Then
+  const maximumStartWasDrawn = canvas.calls.some(([name, x, y]) => name === "moveTo" && x === expectedMaximumX && y === expectedMaximumY);
+  const maximumEndWasDrawn = canvas.calls.some(([name, x, y]) => name === "lineTo" && x === expectedMaximumX && y === expectedZeroAltitudeY);
+  const label = canvas.calls.find(([name, text]) => name === "fillText" && text === expectedLabel);
+  assert.equal(maximumStartWasDrawn, expectedMaximumStartWasDrawn);
+  assert.equal(maximumEndWasDrawn, expectedMaximumEndWasDrawn);
+  assert.equal(label[2], expectedMaximumX);
+  assert.equal(label[3], expectedLabelY);
+  assert.equal(Boolean(label), expectedLabelWasDrawn);
 });
 
 // Vérifie que le libellé accessible décrit les heures solaires de l'axe.

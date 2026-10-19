@@ -21,7 +21,7 @@ Le script ouvre l'application dans votre navigateur. Python 3 est nécessaire po
 1. Choisissez une date. Le bouton « Aujourd'hui » sélectionne le jour courant dans le fuseau horaire du lieu choisi, et non celui de l'appareil.
 2. Choisissez une ville ou indiquez ses coordonnées. Le bouton « Position » peut remplir les coordonnées à partir de votre emplacement, avec l'autorisation de votre navigateur.
 3. Vérifiez le fuseau horaire, puis choisissez un modèle de calcul si nécessaire. Le modèle recommandé est sélectionné par défaut.
-4. Consultez la durée estimée, les heures locales de lever et de coucher, et le graphique. Vous pouvez modifier le seuil solaire pour adapter le calcul.
+4. Consultez la durée estimée, les heures locales de lever et de coucher, et le graphique. Une verticale fine repère le maximum de la courbe à midi solaire, avec « S » juste sous la ligne horizontale 0°. Lorsque la date affichée correspond au jour courant dans le fuseau du lieu, le soleil et une verticale marquent l'heure solaire actuelle; le repère est actualisé chaque minute. Vous pouvez modifier le seuil solaire pour adapter le calcul.
 
 Le seuil par défaut est −0,833°. Il sert à estimer les heures habituelles de lever et de coucher. Aux endroits où le Soleil ne franchit pas ce seuil pendant une journée, l'application indique une nuit ou un jour polaire.
 

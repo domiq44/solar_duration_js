@@ -127,6 +127,13 @@ export function solarAltitude(hour, latitude, declination) {
   return Math.asin(Math.max(-1, Math.min(1, sineAltitude))) * degrees;
 }
 
+export function solarHourAt(instant, longitude, date) {
+  const utcMinutes = instant.getUTCHours() * 60 + instant.getUTCMinutes()
+    + instant.getUTCSeconds() / 60 + instant.getUTCMilliseconds() / 60000;
+  const hour = (utcMinutes + 4 * longitude + equationOfTimeMinutes(date)) / 60;
+  return ((hour % 24) + 24) % 24;
+}
+
 export function estimateSolarEvents(date, latitude, longitude, declination, threshold, timezone) {
   const phi = latitude * radians;
   const delta = declination * radians;

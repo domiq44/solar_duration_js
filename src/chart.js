@@ -6,7 +6,7 @@ function formatLatitude(latitude) {
   return `${absolute}° ${hemisphere}`;
 }
 
-export function drawSolarChart(canvas, latitude, declination, threshold) {
+export function drawSolarChart(canvas, latitude, declination, threshold, currentSolarHour = null) {
   const bounds = canvas.getBoundingClientRect();
   if (!bounds.width || !bounds.height) return;
   const scale = window.devicePixelRatio || 1;
@@ -62,6 +62,7 @@ export function drawSolarChart(canvas, latitude, declination, threshold) {
   context.fillStyle = "rgba(231, 168, 55, 0.15)";
   context.fill();
   context.restore();
+  context.setLineDash([]);
 
   context.beginPath();
   for (let step = 0; step <= 144; step += 1) {
@@ -75,8 +76,38 @@ export function drawSolarChart(canvas, latitude, declination, threshold) {
   context.lineWidth = 2.5;
   context.lineJoin = "round";
   context.stroke();
+  const maximumHour = 12;
+  const maximumX = x(maximumHour);
+  const zeroAltitudeY = y(0);
+  context.beginPath();
+  context.moveTo(maximumX, y(solarAltitude(maximumHour, latitude, declination)));
+  context.lineTo(maximumX, zeroAltitudeY);
+  context.setLineDash([]);
+  context.strokeStyle = "rgba(100, 113, 105, 0.65)";
+  context.lineWidth = 1;
+  context.stroke();
+  context.font = "10px Segoe UI, sans-serif";
+  context.fillStyle = "#647169";
+  context.textAlign = "center";
+  context.fillText("S", maximumX, zeroAltitudeY + 12);
+  if (currentSolarHour !== null) {
+    const altitude = solarAltitude(currentSolarHour, latitude, declination);
+    const markerY = y(altitude);
+    context.beginPath();
+    context.moveTo(x(currentSolarHour), markerY);
+    context.lineTo(x(currentSolarHour), y(0));
+    context.strokeStyle = "rgba(217, 148, 34, 0.65)";
+    context.lineWidth = 1;
+    context.stroke();
+    context.font = "34px Segoe UI Symbol, sans-serif";
+    context.fillStyle = "#d99422";
+    context.textAlign = "center";
+    context.fillText("☀", x(currentSolarHour), markerY);
+  }
+  context.font = "10px Segoe UI, sans-serif";
   context.fillStyle = "#647169";
   context.textAlign = "center";
   for (const hour of [0, 6, 12, 18, 24]) context.fillText(`${String(hour).padStart(2, "0")} h`, x(hour), height - 10);
-  canvas.setAttribute("aria-label", `Hauteur solaire en heure solaire. Latitude ${formatLatitude(latitude)}, déclinaison ${declination.toFixed(2)} degrés, seuil ${threshold.toFixed(3)} degrés.`);
+  const currentTimeLabel = currentSolarHour === null ? "" : " Le soleil indique l'heure actuelle.";
+  canvas.setAttribute("aria-label", `Hauteur solaire en heure solaire. Latitude ${formatLatitude(latitude)}, déclinaison ${declination.toFixed(2)} degrés, seuil ${threshold.toFixed(3)} degrés.${currentTimeLabel}`);
 }

@@ -4,7 +4,8 @@ import { drawSolarChart } from "./chart.js";
 import { calculateSolarDay } from "./calculation.js";
 import { dateStringInTimezone, formatClockTime, formatDuration } from "./formatting.js";
 import {
-  parseDate
+  parseDate,
+  solarHourAt
 } from "./solar.js";
 import { clearSettings, loadSettings, saveSettings } from "./settings.js";
 
@@ -25,6 +26,7 @@ const validationMessages = {
 };
 
 let chosenCityName = "";
+let currentSolarChartData = null;
 
 function setStatus(message, error = false) {
   elements["status-message"].textContent = message;
@@ -66,6 +68,7 @@ function persistSettings() {
 }
 
 function clearResults() {
+  currentSolarChartData = null;
   elements["result-date"].textContent = "";
   elements["duration-value"].textContent = "— h — min";
   elements["sunrise-value"].textContent = "—";
@@ -77,14 +80,26 @@ function clearResults() {
   elements["solar-chart"].setAttribute("aria-label", "Graphique indisponible tant que les paramètres ne sont pas valides.");
 }
 
+function redrawSolarChart() {
+  if (!currentSolarChartData) return;
+  const now = new Date();
+  const currentSolarHour = elements["date-input"].value === dateStringInTimezone(now, elements["timezone-select"].value)
+    ? solarHourAt(now, currentSolarChartData.longitude, currentSolarChartData.date)
+    : null;
+  drawSolarChart(
+    elements["solar-chart"],
+    currentSolarChartData.latitude,
+    currentSolarChartData.declination,
+    currentSolarChartData.threshold,
+    currentSolarHour
+  );
+}
+
 function restoreSettings(cityPicker) {
   const settings = loadSettings();
   if (!settings) return;
 
   const savedDate = parseDate(settings.date);
-  if (savedDate && savedDate.year >= 1900 && savedDate.year <= 3000) {
-    elements["date-input"].value = settings.date;
-  }
   if (Number.isFinite(Number(settings.latitude)) && Number(settings.latitude) >= -90 && Number(settings.latitude) <= 90) {
     elements["latitude-input"].value = String(settings.latitude);
     elements["latitude-range"].value = String(settings.latitude);
@@ -97,6 +112,11 @@ function restoreSettings(cityPicker) {
   }
   if (typeof settings.timezone === "string" && ensureTimezoneOption(settings.timezone)) {
     elements["timezone-select"].value = settings.timezone;
+  }
+  if (savedDate && savedDate.year >= 1900 && savedDate.year <= 3000) {
+    elements["date-input"].value = settings.date;
+  } else {
+    elements["date-input"].value = dateStringInTimezone(new Date(), elements["timezone-select"].value);
   }
   if (Number.isFinite(Number(settings.threshold)) && Number(settings.threshold) >= -90 && Number(settings.threshold) <= 90) {
     elements["threshold-input"].value = String(settings.threshold);
@@ -153,7 +173,14 @@ function update() {
   elements["sunset-value"].textContent = result.duration === 0 ? "Nuit polaire" : result.duration === 24 ? "Jour polaire" : formatClockTime(result.events.sunset);
   setStatus("");
   persistSettings();
-  drawSolarChart(elements["solar-chart"], result.latitude, result.declination, result.threshold);
+  currentSolarChartData = {
+    date: result.date,
+    latitude: result.latitude,
+    longitude: result.longitude,
+    declination: result.declination,
+    threshold: result.threshold
+  };
+  redrawSolarChart();
 }
 
 function selectCity(city) {
@@ -243,3 +270,4 @@ elements["location-button"].addEventListener("click", () => {
 });
 
 new ResizeObserver(update).observe(elements["solar-chart"]);
+window.setInterval(redrawSolarChart, 60_000);

@@ -6,7 +6,8 @@ import {
   durationHours,
   estimateSolarEvents,
   parseDate,
-  solarAltitude
+  solarAltitude,
+  solarHourAt
 } from "../src/solar.js";
 
 const REFERENCE_DATE = "2026-10-18";
@@ -37,6 +38,25 @@ test("parseDate accepte un jour bissextile valide", () => {
 
   // Then
   assert.equal(result.ordinal, expectedOrdinal);
+});
+
+// Vérifie que quinze degrés de longitude vers l'est ajoutent une heure solaire.
+test("solarHourAt tient compte de la longitude", () => {
+  // Given
+  const instantValue = "2026-06-21T12:00:00Z";
+  const dateValue = "2026-06-21";
+  const greenwichLongitude = 0;
+  const fifteenDegreesEastLongitude = 15;
+  const expectedHourDifference = 1;
+  const instant = new Date(instantValue);
+  const date = parseDate(dateValue);
+
+  // When
+  const solarHourAtGreenwich = solarHourAt(instant, greenwichLongitude, date);
+  const solarHourAtFifteenEast = solarHourAt(instant, fifteenDegreesEastLongitude, date);
+
+  // Then
+  assert.equal(solarHourAtFifteenEast - solarHourAtGreenwich, expectedHourDifference);
 });
 
 // Vérifie qu'une année séculaire non divisible par 400 n'est pas bissextile.
