@@ -17,12 +17,6 @@
   --error: #ff9b88;
   --focus-ring: rgb(126 216 167 / 45%);
   --chart-axis: #b5c2ba;
-  --chart-grid: #3a4940;
-  --chart-threshold: #ff927d;
-  --chart-sun: #ffd166;
-  --chart-sun-fill: rgb(255 209 102 / 16%);
-  --chart-current-axis: rgb(181 194 186 / 75%);
-  --chart-current-sun: rgb(255 209 102 / 75%);
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -43,12 +37,6 @@
   --error: #9a321f;
   --focus-ring: rgb(23 104 78 / 35%);
   --chart-axis: #56645b;
-  --chart-grid: #dce4dd;
-  --chart-threshold: #a13e2a;
-  --chart-sun: #8a5500;
-  --chart-sun-fill: rgb(138 85 0 / 12%);
-  --chart-current-axis: rgb(86 100 91 / 70%);
-  --chart-current-sun: rgb(138 85 0 / 65%);
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
@@ -70,12 +58,6 @@
     --error: #9a321f;
     --focus-ring: rgb(23 104 78 / 35%);
     --chart-axis: #56645b;
-    --chart-grid: #dce4dd;
-    --chart-threshold: #a13e2a;
-    --chart-sun: #8a5500;
-    --chart-sun-fill: rgb(138 85 0 / 12%);
-    --chart-current-axis: rgb(86 100 91 / 70%);
-    --chart-current-sun: rgb(138 85 0 / 65%);
   }
 }
 
@@ -158,8 +140,11 @@ summary { padding: 14px 0 10px; color: var(--green-dark); cursor: pointer; font-
 canvas { display: block; width: 100%; height: 100%; min-height: 190px; }
 .legend { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 4px; color: var(--muted); font-size: 10px; }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; }
-.legend-mark { width: 11px; height: 3px; background: var(--sun); }
-.legend-mark.threshold { height: 0; background: none; border-top: 1px dashed var(--coral); }
+.legend-mark { width: 14px; height: 3px; background: #ffe45c; }
+.legend-mark.day, .legend-mark.night { width: 10px; height: 10px; border-radius: 2px; }
+.legend-mark.day { background: #38bdf8; }
+.legend-mark.night { background: #081b37; border: 1px solid #7dd3fc; }
+.legend-mark.threshold { height: 0; background: none; border-top: 1px dashed var(--muted); }
 .footnote { margin: 18px 0 0; color: var(--muted); font-size: 10px; }
 .page-footer { display: flex; justify-content: space-between; gap: 14px; padding-top: 17px; color: var(--muted); font-size: 10px; }
 @media (max-width: 760px) {

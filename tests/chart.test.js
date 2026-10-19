@@ -10,6 +10,11 @@ const DEFAULT_CHART_THRESHOLD = -0.833;
 const DEFAULT_DEVICE_PIXEL_RATIO = 1;
 const DEFAULT_CANVAS_WIDTH = 400;
 const DEFAULT_CANVAS_HEIGHT = 200;
+const CHART_NIGHT_COLOR = "#081b37";
+const CHART_DAY_COLOR = "#38bdf8";
+const CHART_SUN_COLOR = "#ffe45c";
+const EXPECTED_DAY_AND_NIGHT_ARE_DRAWN = true;
+const EXPECTED_SUN_PATH_IS_YELLOW = true;
 
 // Installe temporairement le ratio de pixels de l'écran dans l'environnement global.
 function installWindow(t, devicePixelRatio) {
@@ -29,11 +34,14 @@ function createCanvas(width, height) {
   const calls = [];
   const attributes = new Map();
   const context = Object.fromEntries([
-    "beginPath", "clearRect", "clip", "closePath", "fill", "fillText", "lineTo",
-    "moveTo", "rect", "restore", "save", "scale", "setLineDash", "stroke"
+    "beginPath", "clearRect", "clip", "closePath", "fill", "fillRect", "fillText", "lineTo",
+    "moveTo", "rect", "restore", "save", "scale", "setLineDash", "stroke", "strokeText"
   ].map((name) => [name, (...args) => calls.push([name, ...args])]));
   context.font = "";
-  context.fillText = (...args) => calls.push(["fillText", ...args, context.font]);
+  context.fillRect = (...args) => calls.push(["fillRect", ...args, context.fillStyle]);
+  context.fillText = (...args) => calls.push(["fillText", ...args, context.font, context.fillStyle]);
+  context.strokeText = (...args) => calls.push(["strokeText", ...args, context.strokeStyle]);
+  context.stroke = (...args) => calls.push(["stroke", context.strokeStyle, context.lineWidth]);
   return {
     calls,
     attributes,
@@ -103,6 +111,27 @@ test("le graphique dimensionne le canvas selon le ratio de pixels", (t) => {
   assert.deepEqual(canvas.calls.find(([name]) => name === "scale"), expectedScale);
 });
 
+// Vérifie que les plages jour/nuit et la trajectoire solaire ont leurs couleurs dédiées.
+test("le graphique distingue le jour, la nuit et le tracé solaire", (t) => {
+  // Given
+  const expectedDayAndNightAreDrawn = EXPECTED_DAY_AND_NIGHT_ARE_DRAWN;
+  const expectedSunPathIsYellow = EXPECTED_SUN_PATH_IS_YELLOW;
+  installWindow(t, DEFAULT_DEVICE_PIXEL_RATIO);
+  const canvas = createCanvas(DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT);
+
+  // When
+  drawSolarChart(canvas, DEFAULT_CHART_LATITUDE, DEFAULT_CHART_DECLINATION, DEFAULT_CHART_THRESHOLD);
+
+  // Then
+  const fillColors = canvas.calls
+    .filter(([name]) => name === "fillRect")
+    .map(([, ...args]) => args.at(-1));
+  const dayAndNightAreDrawn = fillColors.includes(CHART_NIGHT_COLOR) && fillColors.includes(CHART_DAY_COLOR);
+  const sunPathIsYellow = canvas.calls.some(([name, color]) => name === "stroke" && color === CHART_SUN_COLOR);
+  assert.equal(dayAndNightAreDrawn, expectedDayAndNightAreDrawn);
+  assert.equal(sunPathIsYellow, expectedSunPathIsYellow);
+});
+
 // Vérifie que l'axe du graphique affiche les heures solaires.
 test("le graphique indique les heures solaires sur son axe", (t) => {
   // Given
@@ -132,7 +161,7 @@ test("le symbole solaire se place à l'heure actuelle sur la courbe", (t) => {
   const expectedSunX = 38 + currentSolarHour / 24 * (DEFAULT_CANVAS_WIDTH - 9 - 38);
   const altitude = solarAltitude(currentSolarHour, DEFAULT_CHART_LATITUDE, DEFAULT_CHART_DECLINATION);
   const expectedSunY = plotTop + (90 - altitude) / 180 * (plotBottom - plotTop);
-  const expectedSunPosition = [expectedSunX, expectedSunY, expectedSunFont];
+  const expectedSunPosition = [expectedSunX, expectedSunY, expectedSunFont, CHART_SUN_COLOR];
   installWindow(t, DEFAULT_DEVICE_PIXEL_RATIO);
   const canvas = createCanvas(DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT);
 
@@ -181,6 +210,11 @@ test("le maximum solaire est repéré à midi sur la ligne zéro", (t) => {
   const expectedZeroAltitudeY = plotTop + (90 - 0) / 180 * (plotBottom - plotTop);
   const expectedLabel = "S";
   const expectedLabelY = expectedZeroAltitudeY + 12;
+  const expectedLabelFont = "bold 12px Segoe UI, sans-serif";
+  const expectedLabelOutlineColor = CHART_NIGHT_COLOR;
+  const expectedLabelFillColor = CHART_SUN_COLOR;
+  const expectedMaximumLineColors = [CHART_NIGHT_COLOR, CHART_SUN_COLOR];
+  const expectedMaximumLineWidths = [6, 3];
   const expectedMaximumStartWasDrawn = true;
   const expectedMaximumEndWasDrawn = true;
   const expectedLabelWasDrawn = true;
@@ -194,10 +228,23 @@ test("le maximum solaire est repéré à midi sur la ligne zéro", (t) => {
   const maximumStartWasDrawn = canvas.calls.some(([name, x, y]) => name === "moveTo" && x === expectedMaximumX && y === expectedMaximumY);
   const maximumEndWasDrawn = canvas.calls.some(([name, x, y]) => name === "lineTo" && x === expectedMaximumX && y === expectedZeroAltitudeY);
   const label = canvas.calls.find(([name, text]) => name === "fillText" && text === expectedLabel);
+  const outlinedLabel = canvas.calls.find(([name, text]) => name === "strokeText" && text === expectedLabel);
+  const maximumLineStartIndex = canvas.calls.findIndex(([name, x, y]) => name === "moveTo" && x === expectedMaximumX && y === expectedMaximumY);
+  const maximumLineColors = canvas.calls
+    .slice(maximumLineStartIndex + 3, maximumLineStartIndex + 5)
+    .map(([name, color]) => name === "stroke" ? color : null);
+  const maximumLineWidths = canvas.calls
+    .slice(maximumLineStartIndex + 3, maximumLineStartIndex + 5)
+    .map(([name, , lineWidth]) => name === "stroke" ? lineWidth : null);
   assert.equal(maximumStartWasDrawn, expectedMaximumStartWasDrawn);
   assert.equal(maximumEndWasDrawn, expectedMaximumEndWasDrawn);
   assert.equal(label[2], expectedMaximumX);
   assert.equal(label[3], expectedLabelY);
+  assert.equal(label[4], expectedLabelFont);
+  assert.equal(label.at(-1), expectedLabelFillColor);
+  assert.equal(outlinedLabel.at(-1), expectedLabelOutlineColor);
+  assert.deepEqual(maximumLineColors, expectedMaximumLineColors);
+  assert.deepEqual(maximumLineWidths, expectedMaximumLineWidths);
   assert.equal(Boolean(label), expectedLabelWasDrawn);
 });
 

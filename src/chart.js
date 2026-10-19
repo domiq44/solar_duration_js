@@ -1,9 +1,51 @@
 import { solarAltitude } from "./solar.js";
 
+const CHART_COLORS = {
+  night: "#081b37",
+  day: "#38bdf8",
+  sun: "#ffe45c",
+  grid: "rgba(224, 242, 254, 0.28)",
+  threshold: "#ffffff"
+};
+const DAYLIGHT_STEPS = 144;
+
 function formatLatitude(latitude) {
   const hemisphere = latitude < 0 ? "S" : "N";
   const absolute = Math.abs(latitude).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
   return `${absolute}° ${hemisphere}`;
+}
+
+function findDaylightIntervals(latitude, declination, threshold) {
+  const intervals = [];
+  let previousHour = 0;
+  let previousIsDay = solarAltitude(previousHour, latitude, declination) >= threshold;
+  let intervalStart = previousIsDay ? previousHour : null;
+
+  for (let step = 1; step <= DAYLIGHT_STEPS; step += 1) {
+    const hour = step / 6;
+    const isDay = solarAltitude(hour, latitude, declination) >= threshold;
+    if (isDay !== previousIsDay) {
+      let low = previousHour;
+      let high = hour;
+      for (let iteration = 0; iteration < 16; iteration += 1) {
+        const midpoint = (low + high) / 2;
+        const midpointIsDay = solarAltitude(midpoint, latitude, declination) >= threshold;
+        if (midpointIsDay === previousIsDay) low = midpoint;
+        else high = midpoint;
+      }
+      const crossing = (low + high) / 2;
+      if (isDay) intervalStart = crossing;
+      else {
+        intervals.push([intervalStart, crossing]);
+        intervalStart = null;
+      }
+    }
+    previousHour = hour;
+    previousIsDay = isDay;
+  }
+
+  if (intervalStart !== null) intervals.push([intervalStart, 24]);
+  return intervals;
 }
 
 export function drawSolarChart(canvas, latitude, declination, threshold, currentSolarHour = null) {
@@ -14,7 +56,7 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
   canvas.height = Math.round(bounds.height * scale);
   const context = canvas.getContext("2d");
   const styles = typeof getComputedStyle === "function" ? getComputedStyle(canvas) : null;
-  const chartColor = (property, fallback) => styles?.getPropertyValue(property).trim() || fallback;
+  const axisColor = styles?.getPropertyValue("--chart-axis").trim() || "#56645b";
   context.scale(scale, scale);
   const width = bounds.width;
   const height = bounds.height;
@@ -23,10 +65,17 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
   const y = (altitude) => plot.top + (90 - altitude) / 180 * (plot.bottom - plot.top);
 
   context.clearRect(0, 0, width, height);
+  context.fillStyle = CHART_COLORS.night;
+  context.fillRect(plot.left, plot.top, plot.right - plot.left, plot.bottom - plot.top);
+  context.fillStyle = CHART_COLORS.day;
+  for (const [start, end] of findDaylightIntervals(latitude, declination, threshold)) {
+    context.fillRect(x(start), plot.top, x(end) - x(start), plot.bottom - plot.top);
+  }
+
   context.font = "10px Segoe UI, sans-serif";
   context.textBaseline = "middle";
-  context.fillStyle = chartColor("--chart-axis", "#56645b");
-  context.strokeStyle = chartColor("--chart-grid", "#dce4dd");
+  context.fillStyle = axisColor;
+  context.strokeStyle = CHART_COLORS.grid;
   context.lineWidth = 1;
   for (const altitude of [-60, 0, 60]) {
     const position = y(altitude);
@@ -38,45 +87,35 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
     context.fillText(`${altitude}°`, plot.left - 8, position);
   }
 
-  context.setLineDash([4, 4]);
-  context.strokeStyle = chartColor("--chart-threshold", "#a13e2a");
-  context.save();
-  context.beginPath();
-  context.rect(plot.left, plot.top, plot.right - plot.left, y(threshold) - plot.top);
-  context.clip();
+  context.setLineDash([5, 5]);
   context.beginPath();
   context.moveTo(plot.left, y(threshold));
   context.lineTo(plot.right, y(threshold));
+  context.strokeStyle = CHART_COLORS.night;
+  context.lineWidth = 3;
+  context.stroke();
+  context.beginPath();
+  context.moveTo(plot.left, y(threshold));
+  context.lineTo(plot.right, y(threshold));
+  context.strokeStyle = CHART_COLORS.threshold;
+  context.lineWidth = 1.25;
   context.stroke();
   context.setLineDash([]);
 
   context.beginPath();
-  for (let step = 0; step <= 144; step += 1) {
+  for (let step = 0; step <= DAYLIGHT_STEPS; step += 1) {
     const hour = step / 6;
     const pointX = x(hour);
     const pointY = y(solarAltitude(hour, latitude, declination));
     if (step === 0) context.moveTo(pointX, pointY);
     else context.lineTo(pointX, pointY);
   }
-  context.lineTo(plot.right, y(-90));
-  context.lineTo(plot.left, y(-90));
-  context.closePath();
-  context.fillStyle = chartColor("--chart-sun-fill", "rgba(138, 85, 0, 0.12)");
-  context.fill();
-  context.restore();
-  context.setLineDash([]);
-
-  context.beginPath();
-  for (let step = 0; step <= 144; step += 1) {
-    const hour = step / 6;
-    const pointX = x(hour);
-    const pointY = y(solarAltitude(hour, latitude, declination));
-    if (step === 0) context.moveTo(pointX, pointY);
-    else context.lineTo(pointX, pointY);
-  }
-  context.strokeStyle = chartColor("--chart-sun", "#8a5500");
-  context.lineWidth = 2.5;
+  context.strokeStyle = CHART_COLORS.night;
+  context.lineWidth = 5.5;
   context.lineJoin = "round";
+  context.stroke();
+  context.strokeStyle = CHART_COLORS.sun;
+  context.lineWidth = 2.5;
   context.stroke();
   const maximumHour = 12;
   const maximumX = x(maximumHour);
@@ -85,12 +124,20 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
   context.moveTo(maximumX, y(solarAltitude(maximumHour, latitude, declination)));
   context.lineTo(maximumX, zeroAltitudeY);
   context.setLineDash([]);
-  context.strokeStyle = chartColor("--chart-current-axis", "rgba(86, 100, 91, 0.7)");
-  context.lineWidth = 1;
+  context.lineCap = "round";
+  context.strokeStyle = CHART_COLORS.night;
+  context.lineWidth = 6;
   context.stroke();
-  context.font = "10px Segoe UI, sans-serif";
-  context.fillStyle = chartColor("--chart-axis", "#56645b");
+  context.strokeStyle = CHART_COLORS.sun;
+  context.lineWidth = 3;
+  context.stroke();
+  context.lineCap = "butt";
+  context.font = "bold 12px Segoe UI, sans-serif";
+  context.strokeStyle = CHART_COLORS.night;
+  context.lineWidth = 4;
   context.textAlign = "center";
+  context.strokeText("S", maximumX, zeroAltitudeY + 12);
+  context.fillStyle = CHART_COLORS.sun;
   context.fillText("S", maximumX, zeroAltitudeY + 12);
   if (currentSolarHour !== null) {
     const altitude = solarAltitude(currentSolarHour, latitude, declination);
@@ -98,16 +145,22 @@ export function drawSolarChart(canvas, latitude, declination, threshold, current
     context.beginPath();
     context.moveTo(x(currentSolarHour), markerY);
     context.lineTo(x(currentSolarHour), y(0));
-    context.strokeStyle = chartColor("--chart-current-sun", "rgba(138, 85, 0, 0.65)");
-    context.lineWidth = 1;
+    context.strokeStyle = CHART_COLORS.night;
+    context.lineWidth = 4;
+    context.stroke();
+    context.strokeStyle = CHART_COLORS.sun;
+    context.lineWidth = 1.5;
     context.stroke();
     context.font = "34px Segoe UI Symbol, sans-serif";
-    context.fillStyle = chartColor("--chart-sun", "#8a5500");
+    context.strokeStyle = CHART_COLORS.night;
+    context.lineWidth = 2;
     context.textAlign = "center";
+    context.strokeText("☀", x(currentSolarHour), markerY);
+    context.fillStyle = CHART_COLORS.sun;
     context.fillText("☀", x(currentSolarHour), markerY);
   }
   context.font = "10px Segoe UI, sans-serif";
-  context.fillStyle = chartColor("--chart-axis", "#56645b");
+  context.fillStyle = axisColor;
   context.textAlign = "center";
   for (const hour of [0, 6, 12, 18, 24]) context.fillText(`${String(hour).padStart(2, "0")} h`, x(hour), height - 10);
   const currentTimeLabel = currentSolarHour === null ? "" : " Le soleil indique l'heure actuelle.";
